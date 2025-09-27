@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Jurify - Professional Legal AI Platform Design System
+All colors MUST be HSL for proper theming.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Professional light theme */
+    --background: 0 0% 98%;
+    --foreground: 224 15% 20%;
+
+    /* Card styling */
+    --card: 0 0% 100%;
+    --card-foreground: 224 15% 20%;
+
+    /* Popover styling */
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 15% 20%;
+
+    /* Primary - Professional blue from reference */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+
+    /* Secondary - Subtle professional tones */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 15% 20%;
+
+    /* Muted colors */
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent colors */
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 15% 20%;
+
+    /* Status colors for legal documents */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+
+    /* Border radius */
+    --radius: 0.5rem;
+
+    /* Sidebar - Dark professional theme */
+    --sidebar-background: 224 28% 15%;
+    --sidebar-foreground: 220 14% 85%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 28% 20%;
+    --sidebar-accent-foreground: 220 14% 85%;
+    --sidebar-border: 224 28% 25%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Professional gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(250 84% 54%));
+    --gradient-hero: linear-gradient(135deg, hsl(224 28% 15%) 0%, hsl(224 28% 20%) 100%);
+    
+    /* Chart colors for statistics */
+    --chart-blue: 217 91% 60%;
+    --chart-green: 142 76% 36%;
+    --chart-orange: 38 92% 50%;
+    --chart-red: 0 84% 60%;
+    --chart-purple: 250 84% 54%;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(224 28% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(224 28% 15% / 0.1), 0 2px 4px -1px hsl(224 28% 15% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(224 28% 15% / 0.1), 0 4px 6px -2px hsl(224 28% 15% / 0.05);
+
+    /* Transitions */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Dark theme for Jurify - maintains professional legal aesthetic */
+    --background: 224 28% 12%;
+    --foreground: 220 14% 95%;
+
+    --card: 224 28% 15%;
+    --card-foreground: 220 14% 95%;
+
+    --popover: 224 28% 15%;
+    --popover-foreground: 220 14% 95%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+
+    --secondary: 224 28% 20%;
+    --secondary-foreground: 220 14% 95%;
+
+    --muted: 224 28% 18%;
+    --muted-foreground: 220 9% 65%;
+
+    --accent: 224 28% 20%;
+    --accent-foreground: 220 14% 95%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 224 28% 25%;
+    --input: 224 28% 25%;
+    --ring: 217 91% 60%;
+
+    --sidebar-background: 224 28% 8%;
+    --sidebar-foreground: 220 14% 85%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 28% 15%;
+    --sidebar-accent-foreground: 220 14% 85%;
+    --sidebar-border: 224 28% 20%;
+    --sidebar-ring: 217 91% 60%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(250 84% 54%));
+    --gradient-hero: linear-gradient(135deg, hsl(224 28% 8%) 0%, hsl(224 28% 15%) 100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
