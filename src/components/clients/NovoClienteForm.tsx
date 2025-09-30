@@ -21,20 +21,21 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { useCreateClient } from "@/hooks/use-clients";
 
 // Schema de validação para o formulário
 const formSchema = z.object({
-  nome: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
-  email: z.string().email({ message: "Email inválido" }),
-  telefone: z.string().min(10, { message: "Telefone inválido" }),
-  cpf_cnpj: z.string().min(11, { message: "CPF/CNPJ inválido" }),
-  tipo: z.enum(["pessoa_fisica", "pessoa_juridica"]),
-  endereco: z.string().min(5, { message: "Endereço deve ter pelo menos 5 caracteres" }),
-  cidade: z.string().min(2, { message: "Cidade deve ter pelo menos 2 caracteres" }),
-  estado: z.string().length(2, { message: "Use a sigla do estado (2 caracteres)" }),
-  cep: z.string().min(8, { message: "CEP inválido" }),
+  nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  email: z.string().email("Email inválido"),
+  telefone: z.string().min(10, "Telefone deve ter pelo menos 10 dígitos"),
+  cpf_cnpj: z.string().min(11, "CPF/CNPJ deve ter pelo menos 11 dígitos"),
+  tipo: z.enum(["individual", "company"]),
+  endereco: z.string().min(5, "Endereço deve ter pelo menos 5 caracteres"),
+  cidade: z.string().min(2, "Cidade deve ter pelo menos 2 caracteres"),
+  estado: z.string().min(2, "Estado deve ter pelo menos 2 caracteres"),
+  cep: z.string().min(8, "CEP deve ter 8 dígitos"),
   observacoes: z.string().optional(),
 });
 
@@ -48,6 +49,7 @@ interface NovoClienteFormProps {
 
 export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: NovoClienteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const createClientMutation = useCreateClient();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,7 +58,7 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
       email: "",
       telefone: "",
       cpf_cnpj: "",
-      tipo: "pessoa_fisica",
+      tipo: "individual",
       endereco: "",
       cidade: "",
       estado: "",
@@ -69,15 +71,18 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
     setIsSubmitting(true);
     
     try {
-      // Aqui seria a integração com o Supabase
-      console.log("Dados do cliente:", data);
-      
-      // Simulando um delay de envio para o banco de dados
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Cliente adicionado com sucesso!",
-        description: `${data.nome} foi adicionado à sua lista de clientes.`,
+      // Mapear os dados do formulário para o formato esperado pelo Supabase
+      await createClientMutation.mutateAsync({
+        name: data.nome,
+        email: data.email,
+        phone: data.telefone,
+        cpf_cnpj: data.cpf_cnpj,
+        client_type: data.tipo,
+        address: data.endereco,
+        city: data.cidade,
+        state: data.estado,
+        zip_code: data.cep,
+        notes: data.observacoes || undefined,
       });
       
       form.reset();
@@ -85,11 +90,7 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
       if (onClienteAdicionado) onClienteAdicionado();
     } catch (error) {
       console.error("Erro ao adicionar cliente:", error);
-      toast({
-        title: "Erro ao adicionar cliente",
-        description: "Ocorreu um erro ao tentar adicionar o cliente. Tente novamente.",
-        variant: "destructive",
-      });
+      // O erro já é tratado pelo hook useCreateClient
     } finally {
       setIsSubmitting(false);
     }
@@ -163,8 +164,8 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="pessoa_fisica">Pessoa Física</SelectItem>
-                        <SelectItem value="pessoa_juridica">Pessoa Jurídica</SelectItem>
+                        <SelectItem value="individual">Pessoa Física</SelectItem>
+                    <SelectItem value="company">Pessoa Jurídica</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -267,8 +268,15 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Salvando..." : "Salvar cliente"}
+              <Button type="submit" disabled={isSubmitting || createClientMutation.isPending}>
+                {isSubmitting || createClientMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar cliente"
+                )}
               </Button>
             </DialogFooter>
           </form>

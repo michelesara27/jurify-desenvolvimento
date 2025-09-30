@@ -4,41 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Phone, Mail, Calendar, FileText, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Search, Phone, Mail, Calendar, FileText, Users, Edit, Loader2 } from "lucide-react";
 import { NovoClienteForm } from "@/components/clients/NovoClienteForm";
-
-const clients = [
-  {
-    id: 1,
-    name: "Maria Santos",
-    email: "maria.santos@email.com",
-    phone: "(11) 99999-9999",
-    cases: 3,
-    activeCases: 2,
-    lastActivity: "2024-01-15",
-    status: "ativo",
-  },
-  {
-    id: 2,
-    name: "João Silva",
-    email: "joao.silva@email.com", 
-    phone: "(11) 88888-8888",
-    cases: 1,
-    activeCases: 1,
-    lastActivity: "2024-01-12",
-    status: "ativo",
-  },
-  {
-    id: 3,
-    name: "Ana Costa",
-    email: "ana.costa@email.com",
-    phone: "(11) 77777-7777", 
-    cases: 5,
-    activeCases: 0,
-    lastActivity: "2023-12-20",
-    status: "inativo",
-  },
-];
+import { EditClientForm } from "@/components/clients/EditClientForm";
+import { useClients } from "@/hooks/use-clients";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const cases = [
   {
@@ -89,11 +61,47 @@ const priorityColors = {
 
 const ClientesCasos = () => {
   const [novoClienteDialogOpen, setNovoClienteDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<string | null>(null);
+  
+  // Buscar os últimos 4 clientes cadastrados
+  const { data: clients, isLoading: clientsLoading, error: clientsError } = useClients(4);
   
   const handleClienteAdicionado = () => {
-    // Aqui poderia recarregar a lista de clientes
+    // O hook já invalida automaticamente as queries
     console.log("Cliente adicionado com sucesso!");
   };
+
+  const handleEditClient = (clientId: string) => {
+    setEditingClient(clientId);
+  };
+
+  const handleClienteAtualizado = () => {
+    // O hook já invalida automaticamente as queries
+    setEditingClient(null);
+    console.log("Cliente atualizado com sucesso!");
+  };
+
+  const renderClientSkeleton = () => (
+    <div className="p-4 border border-border rounded-lg">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <Skeleton className="h-5 w-32 mb-2" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <Skeleton className="h-6 w-16" />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-4 w-24" />
+      </div>
+    </div>
+  );
   
   return (
     <MainLayout>
@@ -123,6 +131,14 @@ const ClientesCasos = () => {
           onClienteAdicionado={handleClienteAdicionado}
         />
 
+        {/* Formulário de Edição de Cliente */}
+        <EditClientForm
+          clientId={editingClient}
+          open={!!editingClient}
+          onOpenChange={(open) => !open && setEditingClient(null)}
+          onClienteAtualizado={handleClienteAtualizado}
+        />
+
         {/* Search */}
         <div className="flex gap-4">
           <div className="relative flex-1">
@@ -146,42 +162,83 @@ const ClientesCasos = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {clients.map((client) => (
-                  <div key={client.id} className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{client.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {client.email}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {client.phone}
+                {clientsLoading ? (
+                  // Skeleton loading para 4 clientes
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index}>
+                      {renderClientSkeleton()}
+                    </div>
+                  ))
+                ) : clientsError ? (
+                  <div className="text-center py-8">
+                    <p className="text-destructive mb-2">Erro ao carregar clientes</p>
+                    <p className="text-sm text-muted-foreground">
+                      {clientsError.message}
+                    </p>
+                  </div>
+                ) : clients && clients.length > 0 ? (
+                  clients.map((client) => (
+                    <div key={client.id} className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors group">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground">{client.name}</h3>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {client.email}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {client.phone}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="secondary"
+                            className="bg-success/10 text-success"
+                          >
+                            {client.client_type === 'individual' ? 'PF' : 'PJ'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleEditClient(client.id)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className={statusColors[client.status as keyof typeof statusColors]}
-                      >
-                        {client.status}
-                      </Badge>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex gap-4">
+                          <span className="text-muted-foreground">
+                            <strong className="text-foreground">CPF/CNPJ:</strong> {client.cpf_cnpj}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(client.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </div>
+                      </div>
+                      
+                      {client.notes && (
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          <strong>Observações:</strong> {client.notes}
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex gap-4">
-                        <span><strong>{client.cases}</strong> casos totais</span>
-                        <span><strong>{client.activeCases}</strong> ativos</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(client.lastActivity).toLocaleDateString('pt-BR')}
-                      </div>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-2">Nenhum cliente cadastrado</p>
+                    <p className="text-sm text-muted-foreground">
+                      Clique em "Novo Cliente" para começar
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
