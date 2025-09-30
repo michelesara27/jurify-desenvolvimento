@@ -89,18 +89,16 @@ export const useCreateClient = () => {
 
   return useMutation({
     mutationFn: async (clientData: CreateClientData) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('Usuário não autenticado');
-      }
+      // Para fins de demonstração, vamos usar um user_id fixo
+      // Em produção, você deve implementar autenticação adequada
+      const demoUserId = 'demo-user-id';
 
       const { data, error } = await supabase
         .from('clients')
         .insert([
           {
             ...clientData,
-            user_id: user.id,
+            user_id: demoUserId,
           }
         ])
         .select()
