@@ -20,9 +20,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2, FileText } from "lucide-react";
-import { useCreateLegalDocument } from "@/hooks/use-legal-documents";
+import { useCreateLegalDocument, useUpdateLegalDocument } from "@/hooks/use-legal-documents";
 import { useTemplates } from "@/hooks/use-templates";
 import { useToast } from "@/hooks/use-toast";
+import { webhookService } from "@/services/webhook";
 
 // Schema de validação com apenas os campos essenciais
 const simpleLegalDocumentSchema = z.object({
@@ -40,6 +41,9 @@ type SimpleLegalDocumentFormData = z.infer<typeof simpleLegalDocumentSchema>;
 interface SimpleLegalDocumentFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  initialData?: Partial<SimpleLegalDocumentFormData>;
+  documentId?: string;
+  isEditing?: boolean;
 }
 
 const actionTypeOptions = [
@@ -56,21 +60,28 @@ const actionTypeOptions = [
   { value: "outras", label: "Outras" },
 ];
 
-export function SimpleLegalDocumentForm({ onSuccess, onCancel }: SimpleLegalDocumentFormProps) {
+export function SimpleLegalDocumentForm({ 
+  onSuccess, 
+  onCancel, 
+  initialData, 
+  documentId, 
+  isEditing = false 
+}: SimpleLegalDocumentFormProps) {
   const { toast } = useToast();
   const createDocumentMutation = useCreateLegalDocument();
+  const updateDocumentMutation = useUpdateLegalDocument();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
 
   const form = useForm<SimpleLegalDocumentFormData>({
     resolver: zodResolver(simpleLegalDocumentSchema),
     defaultValues: {
-      action_type: "",
-      plaintiff: "",
-      defendant: "",
-      facts: "",
-      legal_basis: "",
-      request: "",
-      template_id: "",
+      action_type: initialData?.action_type || "",
+      plaintiff: initialData?.plaintiff || "",
+      defendant: initialData?.defendant || "",
+      facts: initialData?.facts || "",
+      legal_basis: initialData?.legal_basis || "",
+      request: initialData?.request || "",
+      template_id: initialData?.template_id || "",
     },
   });
 
@@ -90,31 +101,77 @@ export function SimpleLegalDocumentForm({ onSuccess, onCancel }: SimpleLegalDocu
 
   const onSubmit = async (data: SimpleLegalDocumentFormData) => {
     try {
-      // Criar documento com campos essenciais + campos padrão necessários
-      const documentData = {
-        ...data,
-        title: `${data.action_type} - ${data.plaintiff} vs ${data.defendant}`,
-        content: `FATOS:\n${data.facts}\n\nFUNDAMENTO LEGAL:\n${data.legal_basis}\n\nPEDIDO:\n${data.request}`,
-        document_type: "peticion" as const,
-        status: "draft" as const,
-        ai_generated: false,
-        word_count: data.facts.split(' ').length + data.legal_basis.split(' ').length + data.request.split(' ').length,
-        pages_count: 1,
-      };
+      if (isEditing && documentId) {
+        // Atualizar documento existente
+        const updateData = {
+          ...data,
+          title: `${data.action_type} - ${data.plaintiff} vs ${data.defendant}`,
+          content: `FATOS:\n${data.facts}\n\nFUNDAMENTO LEGAL:\n${data.legal_basis}\n\nPEDIDO:\n${data.request}`,
+          word_count: data.facts.split(' ').length + data.legal_basis.split(' ').length + data.request.split(' ').length,
+        };
 
-      await createDocumentMutation.mutateAsync(documentData);
-      
-      toast({
-        title: "Sucesso!",
-        description: "Peça jurídica criada com sucesso.",
-      });
+        await updateDocumentMutation.mutateAsync({
+          id: documentId,
+          ...updateData,
+        });
+        
+        toast({
+          title: "Sucesso!",
+          description: "Peça jurídica atualizada com sucesso.",
+        });
+      } else {
+        // Criar documento com campos essenciais + campos padrão necessários
+        const documentData = {
+          ...data,
+          title: `${data.action_type} - ${data.plaintiff} vs ${data.defendant}`,
+          content: `FATOS:\n${data.facts}\n\nFUNDAMENTO LEGAL:\n${data.legal_basis}\n\nPEDIDO:\n${data.request}`,
+          document_type: "peticion" as const,
+          status: "draft" as const,
+          ai_generated: false,
+          word_count: data.facts.split(' ').length + data.legal_basis.split(' ').length + data.request.split(' ').length,
+          pages_count: 1,
+        };
+
+        // Criar o documento no banco de dados
+        const createdDocument = await createDocumentMutation.mutateAsync(documentData);
+        
+        // Buscar dados do template selecionado (se houver)
+        const selectedTemplate = data.template_id ? 
+          templates?.find(t => t.id === data.template_id) : undefined;
+
+        // Enviar dados para o webhook após sucesso no cadastro
+        try {
+          await webhookService.sendAsync(
+            {
+              ...createdDocument,
+              ...documentData, // Garantir que todos os dados estejam presentes
+            },
+            selectedTemplate
+          );
+          
+          console.log('Dados enviados para webhook com sucesso');
+        } catch (webhookError) {
+          console.error('Erro ao enviar dados para webhook:', webhookError);
+          // Não interromper o fluxo principal se o webhook falhar
+          toast({
+            title: "Aviso",
+            description: "Peça criada com sucesso, mas houve um problema no processamento automático.",
+            variant: "default",
+          });
+        }
+        
+        toast({
+          title: "Sucesso!",
+          description: "Peça jurídica criada com sucesso.",
+        });
+      }
       
       form.reset();
       onSuccess?.();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao criar peça jurídica. Tente novamente.",
+        description: isEditing ? "Erro ao atualizar peça jurídica. Tente novamente." : "Erro ao criar peça jurídica. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -124,7 +181,9 @@ export function SimpleLegalDocumentForm({ onSuccess, onCancel }: SimpleLegalDocu
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-6">
         <FileText className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Nova Peça Jurídica</h2>
+        <h2 className="text-lg font-semibold">
+          {isEditing ? "Editar Peça Jurídica" : "Nova Peça Jurídica"}
+        </h2>
       </div>
 
       <Form {...form}>
@@ -289,16 +348,16 @@ export function SimpleLegalDocumentForm({ onSuccess, onCancel }: SimpleLegalDocu
             </Button>
             <Button
               type="submit"
-              disabled={createDocumentMutation.isPending}
+              disabled={createDocumentMutation.isPending || updateDocumentMutation.isPending}
               className="min-w-[120px]"
             >
-              {createDocumentMutation.isPending ? (
+              {(createDocumentMutation.isPending || updateDocumentMutation.isPending) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Criando...
+                  {isEditing ? "Atualizando..." : "Criando..."}
                 </>
               ) : (
-                "Criar Peça"
+                isEditing ? "Atualizar Peça" : "Criar Peça"
               )}
             </Button>
           </div>

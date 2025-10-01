@@ -59,6 +59,7 @@ export const useLegalDocuments = (limit?: number) => {
           case:cases(*),
           template:document_templates(*)
         `)
+        .eq("is_active", true) // Filtrar apenas documentos ativos
         .order("created_at", { ascending: false });
 
       // Se não estiver em modo demo, filtrar por usuário
@@ -247,6 +248,46 @@ export const useDeleteLegalDocument = () => {
   });
 };
 
+// Hook para inativar documento jurídico (soft delete)
+export const useDeactivateLegalDocument = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("legal_documents")
+        .update({ is_active: false })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Erro ao inativar documento:", error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["legal-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["legal-documents-stats"] });
+      toast({
+        title: "Sucesso!",
+        description: "Peça jurídica inativada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      console.error("Erro ao inativar documento:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao inativar peça jurídica. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 // Hook para estatísticas dos documentos
 export const useLegalDocumentsStats = () => {
   const { user } = useAuth();
@@ -264,7 +305,8 @@ export const useLegalDocumentsStats = () => {
 
       let query = supabase
         .from("legal_documents")
-        .select("status, pages_count");
+        .select("status, pages_count")
+        .eq("is_active", true); // Filtrar apenas documentos ativos
 
       // Se não estiver em modo demo, filtrar por usuário
       if (user?.id) {

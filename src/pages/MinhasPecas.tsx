@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useLegalDocuments, useLegalDocumentsStats } from "@/hooks/use-legal-documents";
+import { useLegalDocuments, useLegalDocumentsStats, useUpdateLegalDocument, useLegalDocument, useDeactivateLegalDocument } from "@/hooks/use-legal-documents";
 import { SimpleLegalDocumentForm } from "@/components/legal-documents/SimpleLegalDocumentForm";
 import {
   Dialog,
@@ -31,7 +31,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const statusColors = {
   draft: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -78,10 +87,17 @@ const MinhasPecas = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [documentToDeactivate, setDocumentToDeactivate] = useState<any>(null);
   
   // Hooks para buscar dados do Supabase
   const { data: documents = [], isLoading: documentsLoading, error: documentsError } = useLegalDocuments(5);
   const { data: stats, isLoading: statsLoading } = useLegalDocumentsStats();
+  const { data: selectedDocument } = useLegalDocument(selectedDocumentId || "");
+  const { data: editingDocument } = useLegalDocument(editingDocumentId || "");
+  const deactivateDocument = useDeactivateLegalDocument();
 
   // Filtrar documentos baseado na busca e filtros
   const filteredDocuments = documents.filter(doc => {
@@ -99,6 +115,31 @@ const MinhasPecas = () => {
   if (documentsError) {
     console.error("Erro ao carregar documentos:", documentsError);
   }
+
+  const handleViewDetails = (documentId: string) => {
+    setSelectedDocumentId(documentId);
+  };
+
+  const handleEditDocument = (documentId: string) => {
+    setEditingDocumentId(documentId);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingDocumentId(null);
+  };
+
+  const handleDeactivateDocument = (document: any) => {
+    setDocumentToDeactivate(document);
+    setIsDeactivateDialogOpen(true);
+  };
+
+  const confirmDeactivation = async () => {
+    if (documentToDeactivate) {
+      await deactivateDocument.mutateAsync(documentToDeactivate.id);
+      setIsDeactivateDialogOpen(false);
+      setDocumentToDeactivate(null);
+    }
+  };
 
   return (
     <MainLayout>
@@ -131,8 +172,8 @@ const MinhasPecas = () => {
           </Dialog>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards - Removido o card "Total de Páginas" */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -183,24 +224,6 @@ const MinhasPecas = () => {
                   </p>
                 </div>
                 <FileIcon className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total de Páginas</p>
-                  <p className="text-2xl font-bold">
-                    {statsLoading ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      stats?.totalPages || 0
-                    )}
-                  </p>
-                </div>
-                <Hash className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -323,16 +346,150 @@ const MinhasPecas = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 ml-4">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <Sheet>
+                          <SheetTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewDetails(doc.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent className="w-[600px] sm:w-[800px] overflow-y-auto">
+                            <SheetHeader>
+                              <SheetTitle>Detalhes da Peça Jurídica</SheetTitle>
+                              <SheetDescription>
+                                Visualize todas as informações da peça selecionada
+                              </SheetDescription>
+                            </SheetHeader>
+                            {selectedDocument && (
+                              <div className="mt-6 space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Título</h4>
+                                    <p className="text-sm">{selectedDocument.title}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Status</h4>
+                                    <Badge 
+                                      variant="outline" 
+                                      className={statusColors[selectedDocument.status as keyof typeof statusColors]}
+                                    >
+                                      {statusLabels[selectedDocument.status as keyof typeof statusLabels]}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                {selectedDocument.action_type && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Tipo de Ação</h4>
+                                    <p className="text-sm">{selectedDocument.action_type}</p>
+                                  </div>
+                                )}
+
+                                {selectedDocument.plaintiff && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Autor</h4>
+                                    <p className="text-sm">{selectedDocument.plaintiff}</p>
+                                  </div>
+                                )}
+
+                                {selectedDocument.defendant && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Réu</h4>
+                                    <p className="text-sm">{selectedDocument.defendant}</p>
+                                  </div>
+                                )}
+
+                                {selectedDocument.facts && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Fatos</h4>
+                                    <p className="text-sm whitespace-pre-wrap">{selectedDocument.facts}</p>
+                                  </div>
+                                )}
+
+                                {selectedDocument.legal_basis && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Fundamento Legal</h4>
+                                    <p className="text-sm whitespace-pre-wrap">{selectedDocument.legal_basis}</p>
+                                  </div>
+                                )}
+
+                                {selectedDocument.request && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Pedido</h4>
+                                    <p className="text-sm whitespace-pre-wrap">{selectedDocument.request}</p>
+                                  </div>
+                                )}
+
+                                <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Palavras</h4>
+                                    <p className="text-sm">{selectedDocument.word_count || 0}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Páginas</h4>
+                                    <p className="text-sm">{selectedDocument.pages_count || 0}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-sm text-muted-foreground mb-1">Criado em</h4>
+                                    <p className="text-sm">
+                                      {selectedDocument.created_at ? format(new Date(selectedDocument.created_at), "dd/MM/yyyy", { locale: ptBR }) : "N/A"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </SheetContent>
+                        </Sheet>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditDocument(doc.id)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Editar Peça Jurídica</DialogTitle>
+                              <DialogDescription>
+                                Modifique os campos abaixo para atualizar a peça jurídica
+                              </DialogDescription>
+                            </DialogHeader>
+                            {editingDocument && (
+                              <SimpleLegalDocumentForm 
+                                initialData={{
+                                  action_type: editingDocument.action_type || "",
+                                  plaintiff: editingDocument.plaintiff || "",
+                                  defendant: editingDocument.defendant || "",
+                                  facts: editingDocument.facts || "",
+                                  legal_basis: editingDocument.legal_basis || "",
+                                  request: editingDocument.request || "",
+                                  template_id: editingDocument.template_id || undefined,
+                                }}
+                                documentId={editingDocument.id}
+                                onSuccess={handleEditSuccess}
+                                onCancel={() => setEditingDocumentId(null)}
+                                isEditing={true}
+                              />
+                            )}
+                          </DialogContent>
+                        </Dialog>
+
                         <Button variant="ghost" size="sm">
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeactivateDocument(doc)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -343,6 +500,34 @@ const MinhasPecas = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Diálogo de confirmação para inativação */}
+        <Dialog open={isDeactivateDialogOpen} onOpenChange={setIsDeactivateDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirmar Inativação</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja inativar a peça jurídica "{documentToDeactivate?.title}"?
+                Esta ação não pode ser desfeita e a peça não aparecerá mais na listagem.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeactivateDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeactivation}
+                disabled={deactivateDocument.isPending}
+              >
+                {deactivateDocument.isPending ? "Inativando..." : "Inativar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

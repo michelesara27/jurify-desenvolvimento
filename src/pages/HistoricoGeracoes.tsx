@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { RefreshCw, FileDown, ChevronDown, Eye, Download, Trash, Filter, Calendar, Search, Bot, Zap, Clock, FileText } from "lucide-react";
 import { useState } from "react";
+import { PaginatedGenerationsList } from "@/components/generations/PaginatedGenerationsList";
 
 const HistoricoGeracoes = () => {
   const [dateRange, setDateRange] = useState<{
@@ -205,79 +206,12 @@ const HistoricoGeracoes = () => {
             
             {/* Tab: Detalhado */}
             <TabsContent value="detailed" className="mt-6">
-              <Card>
-                <CardHeader className="px-4 sm:px-6">
-                  <CardTitle className="flex items-center justify-between text-base sm:text-lg">
-                    <span>Histórico Detalhado</span>
-                    <Badge variant="outline" className="ml-2">47 gerações</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-2 sm:px-6">
-                  <div className="rounded-md border overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="h-10 px-2 sm:px-4 text-left font-medium whitespace-nowrap">Data</th>
-                          <th className="h-10 px-2 sm:px-4 text-left font-medium">Prompt</th>
-                          <th className="h-10 px-2 sm:px-4 text-left font-medium whitespace-nowrap">Modelo</th>
-                          <th className="h-10 px-2 sm:px-4 text-left font-medium whitespace-nowrap">Tokens</th>
-                          <th className="h-10 px-2 sm:px-4 text-left font-medium whitespace-nowrap">Status</th>
-                          <th className="h-10 px-2 sm:px-4 text-left font-medium whitespace-nowrap">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Dados de exemplo - seriam substituídos por dados reais */}
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <tr key={i} className="border-b">
-                            <td className="p-2 sm:p-4 align-middle whitespace-nowrap">{`${i}/10/2023`}</td>
-                            <td className="p-2 sm:p-4 align-middle">
-                              <div className="max-w-[100px] sm:max-w-[200px] truncate">Petição inicial para processo de divórcio</div>
-                            </td>
-                            <td className="p-2 sm:p-4 align-middle whitespace-nowrap">GPT-4</td>
-                            <td className="p-2 sm:p-4 align-middle whitespace-nowrap">2.4k</td>
-                            <td className="p-2 sm:p-4 align-middle whitespace-nowrap">
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs sm:text-sm">
-                                Concluído
-                              </Badge>
-                            </td>
-                            <td className="p-2 sm:p-4 align-middle">
-                              <div className="flex gap-1 sm:gap-2">
-                                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                                  <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end space-x-2 py-4">
-                    <div className="text-sm text-muted-foreground sm:mr-4 block sm:hidden">
-                      Página 1 de 5
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                    >
-                      Próximo
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <PaginatedGenerationsList 
+                searchQuery={searchQuery}
+                statusFilter={statusFilter}
+                modelFilter={modelFilter}
+                dateRange={dateRange}
+              />
             </TabsContent>
             
             {/* Tab: Análises */}
