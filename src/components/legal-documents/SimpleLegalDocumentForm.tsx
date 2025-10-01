@@ -141,7 +141,7 @@ export function SimpleLegalDocumentForm({
 
         // Enviar dados para o webhook após sucesso no cadastro
         try {
-          await webhookService.sendAsync(
+          await webhookService.sendAsyncWithData(
             {
               ...createdDocument,
               ...documentData, // Garantir que todos os dados estejam presentes
