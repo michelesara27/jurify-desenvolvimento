@@ -125,40 +125,63 @@ class WebhookService {
       errorMessage.includes('cors') ||
       errorMessage.includes('network') ||
       errorMessage.includes('failed to fetch') ||
+      errorMessage.includes('access-control-allow-origin') ||
+      errorMessage.includes('preflight') ||
+      errorMessage.includes('blocked by cors policy') ||
       error.name === 'TypeError'
     );
   }
 
   /**
-   * Trata o erro final após todas as tentativas
+   * Detecta especificamente erros de CORS
    */
-  private handleFinalError(error: Error | null): WebhookResponse {
-    if (!error) {
-      return {
-        success: false,
-        message: 'Erro desconhecido ao enviar dados',
-      };
-    }
-
-    if (error.name === 'AbortError') {
-      return {
-        success: false,
-        message: 'Timeout: O webhook não respondeu dentro do tempo limite',
-      };
-    }
-
-    if (this.isCorsOrNetworkError(error)) {
-      return {
-        success: false,
-        message: 'Erro de conectividade: Verifique se o servidor webhook está configurado corretamente para CORS',
-      };
-    }
-
-    return {
-      success: false,
-      message: `Erro na comunicação após ${this.maxRetries} tentativas: ${error.message}`,
-    };
+  private isCorsError(error: Error): boolean {
+    const errorMessage = error.message.toLowerCase();
+    return (
+      errorMessage.includes('cors') ||
+      errorMessage.includes('access-control-allow-origin') ||
+      errorMessage.includes('preflight') ||
+      errorMessage.includes('blocked by cors policy')
+    );
   }
+
+  /**
+    * Trata o erro final após todas as tentativas
+    */
+   private handleFinalError(error: Error | null): WebhookResponse {
+     if (!error) {
+       return {
+         success: false,
+         message: 'Erro desconhecido ao enviar dados',
+       };
+     }
+
+     if (error.name === 'AbortError') {
+       return {
+         success: false,
+         message: 'Timeout: O webhook não respondeu dentro do tempo limite',
+       };
+     }
+
+     if (this.isCorsError(error)) {
+       return {
+         success: false,
+         message: 'Erro de CORS: O servidor webhook não está configurado para aceitar requisições desta origem. A peça foi salva com sucesso, mas o processamento automático está temporariamente indisponível.',
+       };
+     }
+
+     if (this.isCorsOrNetworkError(error)) {
+       return {
+         success: false,
+         message: 'Erro de conectividade: Verifique se o servidor webhook está configurado corretamente para CORS',
+       };
+     }
+
+     return {
+       success: false,
+       message: `Erro na comunicação após ${this.maxRetries} tentativas: ${error.message}`,
+     };
+   }
 
   /**
    * Função auxiliar para delay

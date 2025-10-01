@@ -152,12 +152,26 @@ export function SimpleLegalDocumentForm({
           console.log('Dados enviados para webhook com sucesso');
         } catch (webhookError) {
           console.error('Erro ao enviar dados para webhook:', webhookError);
-          // Não interromper o fluxo principal se o webhook falhar
-          toast({
-            title: "Aviso",
-            description: "Peça criada com sucesso, mas houve um problema no processamento automático.",
-            variant: "default",
-          });
+          
+          // Verificar se é erro de CORS especificamente
+          const errorMessage = webhookError instanceof Error ? webhookError.message : 'Erro desconhecido';
+          const isCorsError = errorMessage.toLowerCase().includes('cors') || 
+                             errorMessage.toLowerCase().includes('access-control-allow-origin') ||
+                             errorMessage.toLowerCase().includes('blocked by cors policy');
+          
+          if (isCorsError) {
+            toast({
+              title: "Peça Criada com Sucesso",
+              description: "A peça foi salva, mas o processamento automático está temporariamente indisponível devido a configurações do servidor.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Aviso",
+              description: "Peça criada com sucesso, mas houve um problema no processamento automático.",
+              variant: "default",
+            });
+          }
         }
         
         toast({
