@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,88 +14,92 @@ import {
   Trash2,
   Calendar,
   FileText,
-  Clock
+  Clock,
+  Loader2,
+  User,
+  Hash,
+  FileIcon
 } from "lucide-react";
-
-const documents = [
-  {
-    id: 1,
-    title: "Petição Inicial - Ação Trabalhista",
-    client: "Maria Santos",
-    type: "Petição Inicial",
-    category: "Trabalhista",
-    status: "finalizado",
-    createdAt: "2024-01-15",
-    updatedAt: "2024-01-15",
-    wordCount: 2450,
-    pages: 8,
-  },
-  {
-    id: 2,
-    title: "Contestação - Divórcio Consensual",
-    client: "João Silva",
-    type: "Contestação", 
-    category: "Família",
-    status: "rascunho",
-    createdAt: "2024-01-12",
-    updatedAt: "2024-01-14",
-    wordCount: 1820,
-    pages: 6,
-  },
-  {
-    id: 3,
-    title: "Recurso de Apelação",
-    client: "Ana Costa",
-    type: "Recurso",
-    category: "Cível",
-    status: "enviado",
-    createdAt: "2024-01-10",
-    updatedAt: "2024-01-13",
-    wordCount: 3200,
-    pages: 12,
-  },
-  {
-    id: 4,
-    title: "Contrato de Prestação de Serviços",
-    client: "Carlos Oliveira",
-    type: "Contrato",
-    category: "Empresarial",
-    status: "revisao",
-    createdAt: "2024-01-08",
-    updatedAt: "2024-01-12",
-    wordCount: 1950,
-    pages: 7,
-  },
-  {
-    id: 5,
-    title: "Parecer Jurídico - Tributário",
-    client: "Empresa XYZ",
-    type: "Parecer",
-    category: "Tributário",
-    status: "finalizado",
-    createdAt: "2024-01-05",
-    updatedAt: "2024-01-09",
-    wordCount: 2800,
-    pages: 10,
-  },
-];
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useLegalDocuments, useLegalDocumentsStats } from "@/hooks/use-legal-documents";
+import { SimpleLegalDocumentForm } from "@/components/legal-documents/SimpleLegalDocumentForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const statusColors = {
-  rascunho: "bg-muted text-muted-foreground",
-  revisao: "bg-warning/10 text-warning",
-  finalizado: "bg-success/10 text-success",
-  enviado: "bg-primary/10 text-primary",
+  draft: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  review: "bg-blue-100 text-blue-800 border-blue-200",
+  approved: "bg-green-100 text-green-800 border-green-200",
+  filed: "bg-purple-100 text-purple-800 border-purple-200",
+  archived: "bg-gray-100 text-gray-800 border-gray-200",
+};
+
+const statusLabels = {
+  draft: "Rascunho",
+  review: "Em Revisão",
+  approved: "Aprovado",
+  filed: "Protocolado",
+  archived: "Arquivado",
 };
 
 const categoryColors = {
-  Trabalhista: "bg-chart-blue/10 text-chart-blue",
-  Família: "bg-chart-green/10 text-chart-green",
-  Cível: "bg-chart-orange/10 text-chart-orange",
-  Empresarial: "bg-chart-purple/10 text-chart-purple",
-  Tributário: "bg-chart-red/10 text-chart-red",
+  civil: "bg-blue-50 text-blue-700 border-blue-200",
+  trabalhista: "bg-green-50 text-green-700 border-green-200",
+  criminal: "bg-red-50 text-red-700 border-red-200",
+  empresarial: "bg-purple-50 text-purple-700 border-purple-200",
+  consultivo: "bg-orange-50 text-orange-700 border-orange-200",
+  peticion: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  contract: "bg-teal-50 text-teal-700 border-teal-200",
+  appeal: "bg-pink-50 text-pink-700 border-pink-200",
+  motion: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  brief: "bg-amber-50 text-amber-700 border-amber-200",
+  memorandum: "bg-lime-50 text-lime-700 border-lime-200",
+  other: "bg-slate-50 text-slate-700 border-slate-200",
+};
+
+const documentTypeLabels = {
+  peticion: "Petição",
+  contract: "Contrato",
+  appeal: "Recurso",
+  motion: "Moção",
+  brief: "Parecer",
+  memorandum: "Memorando",
+  other: "Outro",
 };
 
 const MinhasPecas = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
+  
+  // Hooks para buscar dados do Supabase
+  const { data: documents = [], isLoading: documentsLoading, error: documentsError } = useLegalDocuments(5);
+  const { data: stats, isLoading: statsLoading } = useLegalDocumentsStats();
+
+  // Filtrar documentos baseado na busca e filtros
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         "";
+    const matchesStatus = !statusFilter || doc.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleNewDocumentSuccess = () => {
+    setIsNewDocumentDialogOpen(false);
+  };
+
+  if (documentsError) {
+    console.error("Erro ao carregar documentos:", documentsError);
+  }
+
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
@@ -104,160 +109,238 @@ const MinhasPecas = () => {
             <h1 className="text-2xl font-bold text-foreground">Minhas Peças</h1>
             <p className="text-muted-foreground">Gerencie todos os documentos jurídicos criados com IA</p>
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Peça Jurídica
-          </Button>
+          <Dialog open={isNewDocumentDialogOpen} onOpenChange={setIsNewDocumentDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Peça Jurídica
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Criar Nova Peça Jurídica</DialogTitle>
+                <DialogDescription>
+                  Preencha os campos abaixo para criar uma nova peça jurídica
+                </DialogDescription>
+              </DialogHeader>
+              <SimpleLegalDocumentForm 
+                onSuccess={handleNewDocumentSuccess}
+                onCancel={() => setIsNewDocumentDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-primary" />
-                </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total de Peças</p>
-                  <p className="text-xl font-bold">{documents.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-warning/10 rounded-lg">
-                  <Clock className="h-5 w-5 text-warning" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Em Rascunho</p>
-                  <p className="text-xl font-bold">
-                    {documents.filter(d => d.status === 'rascunho').length}
+                  <p className="text-sm font-medium text-muted-foreground">Total de Peças</p>
+                  <p className="text-2xl font-bold">
+                    {statsLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      stats?.total || 0
+                    )}
                   </p>
                 </div>
+                <FileText className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-success/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-success" />
-                </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Finalizados</p>
-                  <p className="text-xl font-bold">
-                    {documents.filter(d => d.status === 'finalizado').length}
+                  <p className="text-sm font-medium text-muted-foreground">Em Andamento</p>
+                  <p className="text-2xl font-bold">
+                    {statsLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      ((stats?.draft || 0) + (stats?.review || 0))
+                    )}
                   </p>
                 </div>
+                <Clock className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-chart-orange/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-chart-orange" />
-                </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Páginas</p>
-                  <p className="text-xl font-bold">
-                    {documents.reduce((acc, d) => acc + d.pages, 0)}
+                  <p className="text-sm font-medium text-muted-foreground">Finalizadas</p>
+                  <p className="text-2xl font-bold">
+                    {statsLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      ((stats?.approved || 0) + (stats?.filed || 0))
+                    )}
                   </p>
                 </div>
+                <FileIcon className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Páginas</p>
+                  <p className="text-2xl font-bold">
+                    {statsLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      stats?.totalPages || 0
+                    )}
+                  </p>
+                </div>
+                <Hash className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters */}
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar peças por título, cliente ou tipo..."
-              className="pl-10"
-            />
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar por título ou cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
-          <Button variant="outline" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filtros
-          </Button>
+          <div className="flex gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+            >
+              <option value="">Todos os Status</option>
+              <option value="draft">Rascunho</option>
+              <option value="review">Em Revisão</option>
+              <option value="approved">Aprovado</option>
+              <option value="filed">Protocolado</option>
+              <option value="archived">Arquivado</option>
+            </select>
+            <Button variant="outline" size="sm">
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+            </Button>
+          </div>
         </div>
 
         {/* Documents List */}
         <Card>
           <CardHeader>
-            <CardTitle>Documentos Recentes</CardTitle>
+            <CardTitle>Últimas 5 Peças Jurídicas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {documents.map((doc) => (
-                <div key={doc.id} className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground mb-1">{doc.title}</h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Cliente: {doc.client}</span>
-                        <span>•</span>
-                        <span>{doc.type}</span>
-                        <span>•</span>
-                        <span>{doc.wordCount} palavras</span>
-                        <span>•</span>
-                        <span>{doc.pages} páginas</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={categoryColors[doc.category as keyof typeof categoryColors]}
-                      >
-                        {doc.category}
-                      </Badge>
-                      <Badge
-                        variant="secondary"
-                        className={statusColors[doc.status as keyof typeof statusColors]}
-                      >
-                        {doc.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Criado: {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Atualizado: {new Date(doc.updatedAt).toLocaleDateString('pt-BR')}
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary-hover">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {documentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2">Carregando peças...</span>
                 </div>
-              ))}
-            </div>
+              ) : documentsError ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-destructive mx-auto mb-4" />
+                  <p className="text-destructive font-medium mb-2">Erro ao carregar peças jurídicas</p>
+                  <p className="text-muted-foreground text-sm">
+                    Verifique sua conexão e tente novamente.
+                  </p>
+                </div>
+              ) : filteredDocuments.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    {searchTerm || statusFilter ? "Nenhuma peça encontrada com os filtros aplicados." : "Nenhuma peça jurídica cadastrada ainda."}
+                  </p>
+                  {!searchTerm && !statusFilter && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Clique em "Nova Peça" para criar sua primeira peça jurídica.
+                    </p>
+                  )}
+                </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredDocuments.map((doc) => (
+                  <div key={doc.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold">{doc.title}</h3>
+                          <Badge 
+                            variant="outline" 
+                            className={statusColors[doc.status as keyof typeof statusColors]}
+                          >
+                            {statusLabels[doc.status as keyof typeof statusLabels]}
+                          </Badge>
+                          {doc.document_type && (
+                            <Badge 
+                              variant="outline" 
+                              className={categoryColors[doc.document_type as keyof typeof categoryColors]}
+                            >
+                              {documentTypeLabels[doc.document_type as keyof typeof documentTypeLabels]}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground mb-3">
+                          <div className="flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            <span>{doc.client?.name || "Cliente não informado"}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Hash className="h-4 w-4" />
+                            <span>{doc.word_count || 0} palavras</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <FileIcon className="h-4 w-4" />
+                            <span>{doc.pages_count || 0} páginas</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {doc.created_at ? format(new Date(doc.created_at), "dd/MM/yyyy", { locale: ptBR }) : "Data não informada"}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {doc.updated_at && doc.updated_at !== doc.created_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Atualizado em {format(new Date(doc.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

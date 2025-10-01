@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export interface Client {
   id: string;
@@ -11,9 +12,6 @@ export interface Client {
   cpf_cnpj: string;
   client_type: 'individual' | 'company';
   address: string;
-  city: string;
-  state: string;
-  zip_code: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -26,9 +24,6 @@ export interface CreateClientData {
   cpf_cnpj: string;
   client_type: 'individual' | 'company';
   address: string;
-  city: string;
-  state: string;
-  zip_code: string;
   notes?: string;
 }
 
@@ -86,21 +81,44 @@ export const useClient = (id: string) => {
 export const useCreateClient = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getCurrentUserId, isAuthenticated } = useAuth();
 
   return useMutation({
     mutationFn: async (clientData: CreateClientData) => {
-      // Para fins de demonstração, vamos usar um user_id fixo
-      // Em produção, você deve implementar autenticação adequada
-      const demoUserId = 'demo-user-id';
+      // Verificar se o usuário está autenticado
+      if (!isAuthenticated()) {
+        // Para demonstração, usar um user_id fixo quando não autenticado
+        // Em produção, isso deve redirecionar para login
+        const demoUserId = "demo-user-" + crypto.randomUUID();
+        
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([{
+            ...clientData,
+            user_id: demoUserId,
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(`Erro ao criar cliente: ${error.message}`);
+        }
+
+        return data as Client;
+      }
+
+      // Usuário autenticado - usar o ID real
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error("Usuário não encontrado");
+      }
 
       const { data, error } = await supabase
         .from('clients')
-        .insert([
-          {
-            ...clientData,
-            user_id: demoUserId,
-          }
-        ])
+        .insert([{
+          ...clientData,
+          user_id: userId,
+        }])
         .select()
         .single();
 

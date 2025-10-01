@@ -164,7 +164,6 @@ export type Database = {
       }
       document_templates: {
         Row: {
-          category: string | null
           created_at: string
           description: string | null
           document_type: Database["public"]["Enums"]["document_type"]
@@ -172,8 +171,6 @@ export type Database = {
           is_active: boolean | null
           is_system_template: boolean | null
           name: string
-          preview_content: string | null
-          tags: string[] | null
           template_content: string | null
           updated_at: string
           usage_count: number | null
@@ -181,7 +178,6 @@ export type Database = {
           variables: Json | null
         }
         Insert: {
-          category?: string | null
           created_at?: string
           description?: string | null
           document_type: Database["public"]["Enums"]["document_type"]
@@ -189,8 +185,6 @@ export type Database = {
           is_active?: boolean | null
           is_system_template?: boolean | null
           name: string
-          preview_content?: string | null
-          tags?: string[] | null
           template_content?: string | null
           updated_at?: string
           usage_count?: number | null
@@ -198,7 +192,6 @@ export type Database = {
           variables?: Json | null
         }
         Update: {
-          category?: string | null
           created_at?: string
           description?: string | null
           document_type?: Database["public"]["Enums"]["document_type"]
@@ -206,8 +199,6 @@ export type Database = {
           is_active?: boolean | null
           is_system_template?: boolean | null
           name?: string
-          preview_content?: string | null
-          tags?: string[] | null
           template_content?: string | null
           updated_at?: string
           usage_count?: number | null

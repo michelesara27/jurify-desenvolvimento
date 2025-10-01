@@ -37,9 +37,6 @@ const formSchema = z.object({
   cpf_cnpj: z.string().min(11, "CPF/CNPJ deve ter pelo menos 11 dígitos"),
   tipo: z.enum(["individual", "company"]),
   endereco: z.string().min(5, "Endereço deve ter pelo menos 5 caracteres"),
-  cidade: z.string().min(2, "Cidade deve ter pelo menos 2 caracteres"),
-  estado: z.string().min(2, "Estado deve ter pelo menos 2 caracteres"),
-  cep: z.string().min(8, "CEP deve ter 8 dígitos"),
   observacoes: z.string().optional(),
 });
 
@@ -72,9 +69,6 @@ export const EditClientForm = ({
       cpf_cnpj: "",
       tipo: "individual",
       endereco: "",
-      cidade: "",
-      estado: "",
-      cep: "",
       observacoes: "",
     },
   });
@@ -89,9 +83,6 @@ export const EditClientForm = ({
         cpf_cnpj: client.cpf_cnpj,
         tipo: client.client_type,
         endereco: client.address,
-        cidade: client.city,
-        estado: client.state,
-        cep: client.zip_code,
         observacoes: client.notes || "",
       });
     }
@@ -110,9 +101,6 @@ export const EditClientForm = ({
         cpf_cnpj: data.cpf_cnpj,
         client_type: data.tipo,
         address: data.endereco,
-        city: data.cidade,
-        state: data.estado,
-        zip_code: data.cep,
         notes: data.observacoes,
       });
       
@@ -230,54 +218,12 @@ export const EditClientForm = ({
 
                 <FormField
                   control={form.control}
-                  name="cep"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CEP</FormLabel>
-                      <FormControl>
-                        <Input placeholder="00000-000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="endereco"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Endereço</FormLabel>
                       <FormControl>
                         <Input placeholder="Rua, número, complemento" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="cidade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cidade</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome da cidade" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="estado"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado</FormLabel>
-                      <FormControl>
-                        <Input placeholder="SP" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

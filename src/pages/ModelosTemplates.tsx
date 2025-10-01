@@ -25,21 +25,29 @@ import {
   Edit, 
   Copy, 
   FileText,
-  Crown
+  Crown,
+  Trash2
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-
-interface DocumentTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  document_type: string;
-  is_system_template: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { useState, useMemo } from "react";
+import { 
+  useTemplates, 
+  useDuplicateTemplate, 
+  useDeleteTemplate,
+  DocumentTemplate 
+} from "@/hooks/use-templates";
+import { NovoTemplateForm } from "@/components/templates/NovoTemplateForm";
+import { EditTemplateForm } from "@/components/templates/EditTemplateForm";
+import { ViewTemplateDialog } from "@/components/templates/ViewTemplateDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const documentTypeLabels: Record<string, string> = {
   'petition': 'Petição',
@@ -57,43 +65,18 @@ const statusVariants: Record<string, string> = {
 };
 
 export default function ModelosTemplates() {
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
-  const [filteredTemplates, setFilteredTemplates] = useState<DocumentTemplate[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [showNovoForm, setShowNovoForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<DocumentTemplate | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
+  const { data: templates = [], isLoading } = useTemplates();
+  const duplicateTemplateMutation = useDuplicateTemplate();
+  const deleteTemplateMutation = useDeleteTemplate();
 
-  useEffect(() => {
-    filterTemplates();
-  }, [templates, searchTerm, selectedType, selectedCategory]);
-
-  const fetchTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('document_templates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTemplates(data || []);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os templates.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterTemplates = () => {
+  const filteredTemplates = useMemo(() => {
     let filtered = templates;
 
     if (searchTerm) {
@@ -107,21 +90,24 @@ export default function ModelosTemplates() {
       filtered = filtered.filter(template => template.document_type === selectedType);
     }
 
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(template => 
-        selectedCategory === "system" ? template.is_system_template : !template.is_system_template
-      );
-    }
-
-    setFilteredTemplates(filtered);
-  };
+    return filtered;
+  }, [templates, searchTerm, selectedType]);
 
   const handleDuplicate = async (templateId: string) => {
-    // Implementar lógica de duplicação
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "A duplicação de templates será implementada em breve.",
-    });
+    try {
+      await duplicateTemplateMutation.mutateAsync(templateId);
+    } catch (error) {
+      console.error('Erro ao duplicar template:', error);
+    }
+  };
+
+  const handleDelete = async (template: DocumentTemplate) => {
+    try {
+      await deleteTemplateMutation.mutateAsync(template.id);
+      setTemplateToDelete(null);
+    } catch (error) {
+      console.error('Erro ao excluir template:', error);
+    }
   };
 
   const handleEdit = (templateId: string) => {
@@ -151,7 +137,10 @@ export default function ModelosTemplates() {
               Gerencie seus templates de documentos jurídicos
             </p>
           </div>
-          <Button className="gap-2">
+          <Button 
+            onClick={() => setShowNovoForm(true)}
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" />
             Novo Template
           </Button>
@@ -225,16 +214,7 @@ export default function ModelosTemplates() {
                 </SelectContent>
               </Select>
 
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
-                  <SelectItem value="system">Templates do Sistema</SelectItem>
-                  <SelectItem value="user">Meus Templates</SelectItem>
-                </SelectContent>
-              </Select>
+
             </div>
           </CardContent>
         </Card>
@@ -245,7 +225,7 @@ export default function ModelosTemplates() {
             <CardTitle>Templates Disponíveis</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
+{isLoading ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">Carregando templates...</p>
               </div>
@@ -254,82 +234,135 @@ export default function ModelosTemplates() {
                 <p className="text-muted-foreground">Nenhum template encontrado.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>NOME</TableHead>
-                      <TableHead>TIPO</TableHead>
-                      <TableHead>CATEGORIA</TableHead>
-                      <TableHead>DESCRIÇÃO</TableHead>
-                      <TableHead>AÇÕES</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTemplates.map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell className="font-medium">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Prompt</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTemplates.map((template) => (
+                    <TableRow key={template.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
                           {template.name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {documentTypeLabels[template.document_type] || template.document_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="outline"
-                            className={template.is_system_template ? statusVariants.system : statusVariants.user}
+                          {template.is_system_template && (
+                            <Crown className="h-4 w-4 text-yellow-500" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {documentTypeLabels[template.document_type] || template.document_type}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="max-w-xs truncate">
+                        {template.description || 'Sem prompt'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setViewingTemplate(template)}
                           >
-                            {template.is_system_template ? (
-                              <>
-                                <Crown className="w-3 h-3 mr-1" />
-                                Sistema
-                              </>
-                            ) : (
-                              "Personalizado"
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <p className="truncate text-muted-foreground">
-                            {template.description || "Sem descrição"}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleView(template.id)}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(template.id)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDuplicate(template.id)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {!template.is_system_template && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingTemplate(template)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setTemplateToDelete(template)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDuplicate(template.id)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Formulário de Novo Template */}
+      {showNovoForm && (
+        <NovoTemplateForm
+          open={showNovoForm}
+          onOpenChange={setShowNovoForm}
+        />
+      )}
+
+      {/* Formulário de Edição */}
+      {editingTemplate && (
+        <EditTemplateForm
+          template={editingTemplate}
+          open={!!editingTemplate}
+          onOpenChange={(open) => !open && setEditingTemplate(null)}
+        />
+      )}
+
+      {/* Dialog de Visualização */}
+      {viewingTemplate && (
+        <ViewTemplateDialog
+          template={viewingTemplate}
+          open={!!viewingTemplate}
+          onOpenChange={(open) => !open && setViewingTemplate(null)}
+          onEdit={(template) => {
+            setViewingTemplate(null);
+            setEditingTemplate(template);
+          }}
+          onDuplicate={(templateId) => {
+            setViewingTemplate(null);
+            handleDuplicate(templateId);
+          }}
+        />
+      )}
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o template "{templateToDelete?.name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => templateToDelete && handleDelete(templateToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

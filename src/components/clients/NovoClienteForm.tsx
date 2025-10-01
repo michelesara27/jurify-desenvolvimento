@@ -33,9 +33,6 @@ const formSchema = z.object({
   cpf_cnpj: z.string().min(11, "CPF/CNPJ deve ter pelo menos 11 dígitos"),
   tipo: z.enum(["individual", "company"]),
   endereco: z.string().min(5, "Endereço deve ter pelo menos 5 caracteres"),
-  cidade: z.string().min(2, "Cidade deve ter pelo menos 2 caracteres"),
-  estado: z.string().min(2, "Estado deve ter pelo menos 2 caracteres"),
-  cep: z.string().min(8, "CEP deve ter 8 dígitos"),
   observacoes: z.string().optional(),
 });
 
@@ -60,9 +57,6 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
       cpf_cnpj: "",
       tipo: "individual",
       endereco: "",
-      cidade: "",
-      estado: "",
-      cep: "",
       observacoes: "",
     },
   });
@@ -79,9 +73,6 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
         cpf_cnpj: data.cpf_cnpj,
         client_type: data.tipo,
         address: data.endereco,
-        city: data.cidade,
-        state: data.estado,
-        zip_code: data.cep,
         notes: data.observacoes || undefined,
       });
       
@@ -200,50 +191,6 @@ export function NovoClienteForm({ open, onOpenChange, onClienteAdicionado }: Nov
                   </FormItem>
                 )}
               />
-              
-              <FormField
-                control={form.control}
-                name="cidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Cidade" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="estado"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="UF" maxLength={2} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="cep"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CEP *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="00000-000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
               
               <FormField
                 control={form.control}
