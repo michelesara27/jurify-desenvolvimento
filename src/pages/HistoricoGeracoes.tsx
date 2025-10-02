@@ -1,20 +1,13 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { GenerationsList } from "@/components/generations/GenerationsList";
-import { GenerationsChart } from "@/components/generations/GenerationsChart";
-import { ModelUsageChart, UsageTrendChart, DocumentTypeChart } from "@/components/generations/AdvancedCharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { RefreshCw, FileDown, ChevronDown, Eye, Download, Trash, Filter, Calendar, Search, Bot, Zap, Clock, FileText } from "lucide-react";
+import { RefreshCw, FileDown, ChevronDown, Filter, Calendar, Search } from "lucide-react";
 import { useState } from "react";
-import { PaginatedGenerationsList } from "@/components/generations/PaginatedGenerationsList";
+import { PaginatedLegalDocumentsList } from "@/components/generations/PaginatedLegalDocumentsList";
 
 const HistoricoGeracoes = () => {
   const [dateRange, setDateRange] = useState<{
@@ -25,10 +18,8 @@ const HistoricoGeracoes = () => {
     to: undefined,
   });
   
-  const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [modelFilter, setModelFilter] = useState("all");
 
   const handleExportData = (format: string) => {
     // Implementação da exportação de dados
@@ -115,24 +106,11 @@ const HistoricoGeracoes = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os status</SelectItem>
-                      <SelectItem value="completed">Concluído</SelectItem>
-                      <SelectItem value="processing">Processando</SelectItem>
-                      <SelectItem value="failed">Falhou</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="w-full sm:w-auto">
-                  <Select value={modelFilter} onValueChange={setModelFilter}>
-                    <SelectTrigger className="w-full sm:w-[150px]">
-                      <Filter className="h-4 w-4 mr-2 text-muted-foreground hidden sm:inline" />
-                      <SelectValue placeholder="Modelo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os modelos</SelectItem>
-                      <SelectItem value="gpt4">GPT-4</SelectItem>
-                      <SelectItem value="gpt35">GPT-3.5</SelectItem>
-                      <SelectItem value="claude">Claude</SelectItem>
+                      <SelectItem value="draft">Rascunho</SelectItem>
+                      <SelectItem value="review">Em Revisão</SelectItem>
+                      <SelectItem value="approved">Aprovado</SelectItem>
+                      <SelectItem value="filed">Protocolado</SelectItem>
+                      <SelectItem value="archived">Arquivado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -151,102 +129,12 @@ const HistoricoGeracoes = () => {
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <StatsCard
-            title="Total de Gerações"
-            value="47"
-            icon={Bot}
-            iconColor="blue"
-            description="+12% este mês"
-          />
-          <StatsCard
-            title="Tokens Utilizados"
-            value="125.4k"
-            icon={Zap}
-            iconColor="green"
-            description="-5% em relação ao mês anterior"
-          />
-          <StatsCard
-            title="Tempo Médio"
-            value="3.2s"
-            icon={Clock}
-            iconColor="purple"
-            description="2.8s na última semana"
-          />
-          <StatsCard
-            title="Documentos Criados"
-            value="23"
-            icon={FileText}
-            iconColor="orange"
-            description="+8 novos documentos"
-          />
-        </div>
-
-        {/* Tabs para diferentes visualizações */}
-        <div className="overflow-x-auto">
-          <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 w-full max-w-md">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="detailed">Detalhado</TabsTrigger>
-              <TabsTrigger value="analytics">Análises</TabsTrigger>
-            </TabsList>
-            
-            {/* Tab: Visão Geral */}
-            <TabsContent value="overview" className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                <div className="lg:col-span-2">
-                  <GenerationsList />
-                </div>
-                <div className="lg:col-span-1">
-                  <GenerationsChart />
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* Tab: Detalhado */}
-            <TabsContent value="detailed" className="mt-6">
-              <PaginatedGenerationsList 
-                searchQuery={searchQuery}
-                statusFilter={statusFilter}
-                modelFilter={modelFilter}
-                dateRange={dateRange}
-              />
-            </TabsContent>
-            
-            {/* Tab: Análises */}
-            <TabsContent value="analytics" className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Uso por Modelo de IA</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[250px] sm:h-80">
-                    <ModelUsageChart />
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tendência de Uso ao Longo do Tempo</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[250px] sm:h-80">
-                    <UsageTrendChart />
-                  </CardContent>
-                </Card>
-                
-                <Card className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle>Distribuição de Tokens por Tipo de Documento</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[250px] sm:h-80">
-                    <DocumentTypeChart />
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+        {/* Listagem Paginada de Documentos */}
+        <PaginatedLegalDocumentsList
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
+          dateRange={dateRange}
+        />
       </div>
     </MainLayout>
   );

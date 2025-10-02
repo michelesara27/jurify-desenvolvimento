@@ -123,33 +123,24 @@ export function NewLegalDocumentForm({ onSuccess, onCancel }: NewLegalDocumentFo
 
   // Função para lidar com mudança de template
   const handleTemplateChange = (templateId: string) => {
-    if (!templateId) return;
+    if (!templateId || templateId === "loading" || templateId === "no-templates") return;
     
     const selectedTemplate = templates?.find(t => t.id === templateId);
-    if (!selectedTemplate) return;
-
-    // Preencher campos baseados no template
-    if (selectedTemplate.template_content) {
-      form.setValue('content', selectedTemplate.template_content);
+    if (selectedTemplate) {
+      // Atualizar o document_type baseado no template selecionado
+      if (selectedTemplate.document_type) {
+        form.setValue('document_type', selectedTemplate.document_type);
+      }
       
-      // Atualizar contadores de palavras e páginas
-      const wordCount = estimateWordCount(selectedTemplate.template_content);
-      const pageCount = estimatePageCount(selectedTemplate.template_content);
-      form.setValue('word_count', wordCount);
-      form.setValue('pages_count', pageCount);
-    }
-
-    // Se o template tem variáveis definidas, preencher campos correspondentes
-    if (selectedTemplate.variables) {
-      const vars = selectedTemplate.variables;
-      
-      if (vars.action_type) form.setValue('action_type', vars.action_type);
-      if (vars.document_type) form.setValue('document_type', vars.document_type);
-      if (vars.plaintiff) form.setValue('plaintiff', vars.plaintiff);
-      if (vars.defendant) form.setValue('defendant', vars.defendant);
-      if (vars.facts) form.setValue('facts', vars.facts);
-      if (vars.legal_basis) form.setValue('legal_basis', vars.legal_basis);
-      if (vars.request) form.setValue('request', vars.request);
+      // Preencher conteúdo baseado no template
+      if (selectedTemplate.template_content) {
+        form.setValue('content', selectedTemplate.template_content);
+        
+        // Calcular word_count e pages_count
+        const wordCount = selectedTemplate.template_content.split(/\s+/).filter(word => word.length > 0).length;
+        form.setValue('word_count', wordCount);
+        form.setValue('pages_count', Math.max(1, Math.ceil(wordCount / 250)));
+      }
     }
   };
 

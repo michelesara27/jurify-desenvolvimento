@@ -72,6 +72,13 @@ export function SimpleLegalDocumentForm({
   const updateDocumentMutation = useUpdateLegalDocument();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
 
+  // Função auxiliar para obter document_type do template
+  const getDocumentTypeFromTemplate = (templateId?: string) => {
+    if (!templateId || !templates) return null;
+    const selectedTemplate = templates.find(t => t.id === templateId);
+    return selectedTemplate?.document_type || null;
+  };
+
   const form = useForm<SimpleLegalDocumentFormData>({
     resolver: zodResolver(simpleLegalDocumentSchema),
     defaultValues: {
@@ -91,9 +98,9 @@ export function SimpleLegalDocumentForm({
     const selectedTemplate = templates?.find(t => t.id === templateId);
     if (selectedTemplate) {
       // Preencher apenas o campo de fatos baseado no template
-      if (selectedTemplate.content) {
+      if (selectedTemplate.template_content) {
         // Extrair informações do template se disponível
-        form.setValue('facts', selectedTemplate.content.substring(0, 500) + "...");
+        form.setValue('facts', selectedTemplate.template_content.substring(0, 500) + "...");
       }
       // Removido: inicialização automática do fundamento legal
     }
@@ -125,7 +132,7 @@ export function SimpleLegalDocumentForm({
           ...data,
           title: `${data.action_type} - ${data.plaintiff} vs ${data.defendant}`,
           content: `FATOS:\n${data.facts}\n\nFUNDAMENTO LEGAL:\n${data.legal_basis}\n\nPEDIDO:\n${data.request}`,
-          document_type: "peticion" as const,
+          document_type: getDocumentTypeFromTemplate(data.template_id) || "peticion" as const,
           status: "draft" as const,
           ai_generated: false,
           word_count: data.facts.split(' ').length + data.legal_basis.split(' ').length + data.request.split(' ').length,
