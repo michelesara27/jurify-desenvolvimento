@@ -113,31 +113,31 @@ const HistoricoGeracoes = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <StatsCard
             title="Total de Gerações"
-            value={statsLoading ? "..." : stats?.totalGenerations || "0"}
+            value={statsLoading ? "..." : (stats?.totalGenerations || "0")}
             icon={Bot}
             iconColor="blue"
             description={statsLoading ? "Carregando..." : `${stats?.monthlyGrowth || "+0%"} este mês`}
           />
           <StatsCard
             title="Tokens Utilizados"
-            value={statsLoading ? "..." : stats?.totalTokens || "0"}
+            value={statsLoading ? "..." : (stats?.totalTokens || "0")}
             icon={Zap}
-            iconColor="green"
-            description={statsLoading ? "Carregando..." : `${stats?.tokensGrowth || "+0%"} em relação ao mês anterior`}
+            iconColor="yellow"
+            description={statsLoading ? "Carregando..." : `${stats?.tokensGrowth || "+0%"} este mês`}
           />
           <StatsCard
             title="Tempo Médio"
-            value={statsLoading ? "..." : stats?.averageGenerationTime || "0s"}
+            value={statsLoading ? "..." : (stats?.averageGenerationTime || "0ms")}
             icon={Clock}
-            iconColor="purple"
-            description={statsLoading ? "Carregando..." : `${stats?.averageTimeThisWeek || "0s"} na última semana`}
+            iconColor="green"
+            description={statsLoading ? "Carregando..." : `${stats?.averageTimeThisWeek || "0ms"} esta semana`}
           />
           <StatsCard
             title="Documentos Criados"
-            value={statsLoading ? "..." : stats?.completedDocuments || "0"}
+            value={statsLoading ? "..." : (stats?.completedDocuments || "0")}
             icon={FileText}
-            iconColor="orange"
-            description={statsLoading ? "Carregando..." : `+${stats?.newDocumentsThisMonth || "0"} novos documentos`}
+            iconColor="purple"
+            description={statsLoading ? "Carregando..." : `${stats?.newDocumentsThisMonth || "0"} este mês`}
           />
         </div>
 

@@ -142,6 +142,18 @@ export const useFormattedStats = () => {
     return `${sign}${growth.toFixed(1)}%`;
   };
 
+  // Valores padrão quando não há dados
+  const defaultStats = {
+    totalGenerations: "0",
+    totalTokens: "0",
+    averageGenerationTime: "0ms",
+    completedDocuments: "0",
+    monthlyGrowth: "+0.0%",
+    tokensGrowth: "+0.0%",
+    averageTimeThisWeek: "0ms",
+    newDocumentsThisMonth: "0",
+  };
+
   return {
     stats,
     isLoading,
@@ -155,6 +167,6 @@ export const useFormattedStats = () => {
       tokensGrowth: formatGrowth(stats.tokensGrowth),
       averageTimeThisWeek: formatTime(stats.averageTimeThisWeek),
       newDocumentsThisMonth: formatNumber(stats.newDocumentsThisMonth),
-    } : null,
+    } : defaultStats,
   };
 };
