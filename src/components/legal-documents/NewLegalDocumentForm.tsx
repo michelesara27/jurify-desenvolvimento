@@ -26,10 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Plus, Loader2, FileText } from "lucide-react";
 import { useCreateLegalDocument } from "@/hooks/use-legal-documents";
 import { useTemplates } from "@/hooks/use-templates";
-import { useClients } from "@/hooks/use-clients";
-import { useCases } from "@/hooks/use-cases";
 import { useToast } from "@/hooks/use-toast";
-import { AIGenerationService } from "@/services/ai-generation";
 
 // Schema de validação
 const legalDocumentSchema = z.object({
@@ -186,28 +183,12 @@ export function NewLegalDocumentForm({ onSuccess, onCancel }: NewLegalDocumentFo
 
   const onSubmit = async (data: LegalDocumentFormData) => {
     try {
-      const createdDocument = await createDocumentMutation.mutateAsync({
+      await createDocumentMutation.mutateAsync({
         ...data,
         word_count: estimateWordCount(data.content),
         pages_count: estimatePageCount(data.content),
         tags: tags,
       });
-
-      // Buscar dados do template selecionado (se houver)
-      const selectedTemplate = data.template_id ? 
-        templates?.find(t => t.id === data.template_id) : undefined;
-
-      // Criar registro de geração de IA
-      try {
-        await AIGenerationService.createGenerationFromDocument(
-          createdDocument,
-          selectedTemplate
-        );
-        console.log('Registro de geração de IA criado com sucesso');
-      } catch (aiError) {
-        console.error('Erro ao criar registro de geração de IA:', aiError);
-        // Não bloquear o fluxo se houver erro no registro de IA
-      }
 
       toast({
         title: "Peça criada com sucesso!",

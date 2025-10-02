@@ -24,7 +24,6 @@ import { useCreateLegalDocument, useUpdateLegalDocument } from "@/hooks/use-lega
 import { useTemplates } from "@/hooks/use-templates";
 import { useToast } from "@/hooks/use-toast";
 import { webhookService } from "@/services/webhook";
-import { AIGenerationService } from "@/services/ai-generation";
 
 // Schema de validação com apenas os campos essenciais
 const simpleLegalDocumentSchema = z.object({
@@ -139,18 +138,6 @@ export function SimpleLegalDocumentForm({
         // Buscar dados do template selecionado (se houver)
         const selectedTemplate = data.template_id ? 
           templates?.find(t => t.id === data.template_id) : undefined;
-
-        // Criar registro de geração de IA
-        try {
-          await AIGenerationService.createGenerationFromDocument(
-            createdDocument,
-            selectedTemplate
-          );
-          console.log('Registro de geração de IA criado com sucesso');
-        } catch (aiError) {
-          console.error('Erro ao criar registro de geração de IA:', aiError);
-          // Não bloquear o fluxo se houver erro no registro de IA
-        }
 
         // Enviar dados para o webhook após sucesso no cadastro
         try {
