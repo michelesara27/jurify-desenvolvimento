@@ -22,6 +22,7 @@ import {
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePaginatedGenerations } from "@/hooks/use-paginated-generations";
+import { GenerationDetailsModal } from "./GenerationDetailsModal";
 import { useState } from "react";
 
 interface PaginatedGenerationsListProps {
@@ -29,9 +30,13 @@ interface PaginatedGenerationsListProps {
   statusFilter?: string;
   modelFilter?: string;
   dateRange?: {
-    from: Date | null;
-    to: Date | null;
+    from: Date | undefined;
+    to: Date | undefined;
   };
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  minTokens?: number;
+  maxTokens?: number;
 }
 
 const statusConfig = {
@@ -65,36 +70,49 @@ export const PaginatedGenerationsList = ({
   searchQuery, 
   statusFilter, 
   modelFilter, 
-  dateRange 
+  dateRange,
+  sortBy,
+  sortOrder,
+  minTokens,
+  maxTokens
 }: PaginatedGenerationsListProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [itemsPerPage] = useState(10);
+  const [selectedGeneration, setSelectedGeneration] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data: result, isLoading, error } = usePaginatedGenerations({
+  const handleViewDetails = (generation: any) => {
+    setSelectedGeneration(generation);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedGeneration(null);
+  };
+
+  const { data, isLoading, error } = usePaginatedGenerations({
     page: currentPage,
-    pageSize,
+    limit: itemsPerPage,
     searchQuery,
     statusFilter,
     modelFilter,
     dateRange,
+    sortBy,
+    sortOrder,
+    minTokens,
+    maxTokens
   });
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
+  const totalPages = data?.totalPages || 0;
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            Histórico de Gerações
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-48">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Carregando gerações...</span>
           </div>
         </CardContent>
       </Card>
@@ -103,34 +121,28 @@ export const PaginatedGenerationsList = ({
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            Histórico de Gerações
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-48 text-muted-foreground">
-            <p>Erro ao carregar gerações</p>
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Erro ao carregar gerações: {error.message}
+            </p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!result || result.data.length === 0) {
+  if (!data?.data || data.data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            Histórico de Gerações
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-48 text-muted-foreground">
-            <p>Nenhuma geração encontrada</p>
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Nenhuma geração encontrada
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -138,196 +150,170 @@ export const PaginatedGenerationsList = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            Histórico de Gerações
-          </div>
-          <Badge variant="outline">
-            {result.totalCount} registros
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[600px]">
-          <div className="space-y-4">
-            {result.data.map((generation, index) => {
-              const config = statusConfig[generation.status as keyof typeof statusConfig];
-              const StatusIcon = config.icon;
-              
-              return (
-                <div key={generation.id}>
-                  <div className="flex flex-col space-y-3 p-4 rounded-lg border bg-card">
-                    {/* Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <StatusIcon 
-                          className={`h-4 w-4 ${config.color} ${generation.status === 'processing' ? 'animate-spin' : ''}`} 
-                        />
-                        <Badge variant={config.variant} className="text-xs">
-                          {config.label}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {generation.model_used}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Detalhes da Geração</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="font-medium mb-2">Data e Hora</h4>
-                                <p className="text-sm text-muted-foreground">
-                                  {format(new Date(generation.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                </p>
-                              </div>
-                              <div>
-                                <h4 className="font-medium mb-2">Prompt</h4>
-                                <p className="text-sm text-muted-foreground bg-muted p-3 rounded">
-                                  {generation.prompt}
-                                </p>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <h4 className="font-medium mb-2">Modelo</h4>
-                                  <p className="text-sm text-muted-foreground">{generation.model_used}</p>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium mb-2">Status</h4>
-                                  <Badge variant={config.variant}>{config.label}</Badge>
-                                </div>
-                              </div>
-                              {generation.tokens_used > 0 && (
-                                <div>
-                                  <h4 className="font-medium mb-2">Tokens Utilizados</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {generation.tokens_used.toLocaleString()} tokens
-                                  </p>
-                                </div>
-                              )}
-                              {generation.generation_time && (
-                                <div>
-                                  <h4 className="font-medium mb-2">Tempo de Geração</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {(generation.generation_time / 1000).toFixed(1)} segundos
-                                  </p>
-                                </div>
-                              )}
-                              {generation.error_message && (
-                                <div>
-                                  <h4 className="font-medium mb-2 text-destructive">Erro</h4>
-                                  <p className="text-sm text-destructive bg-destructive/10 p-3 rounded">
-                                    {generation.error_message}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        {generation.document_id && (
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4" />
+    <>
+      <Card className="w-full">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-semibold">
+            Gerações de IA ({data?.total || 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[600px]">
+            <div className="space-y-4">
+              {data.data.map((generation, index) => {
+                const config = statusConfig[generation.status as keyof typeof statusConfig];
+                const StatusIcon = config.icon;
+                
+                return (
+                  <div key={generation.id}>
+                    <div className="flex flex-col space-y-3 p-4 rounded-lg border bg-card">
+                      {/* Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <StatusIcon 
+                            className={`h-4 w-4 ${config.color} ${generation.status === 'processing' ? 'animate-spin' : ''}`} 
+                          />
+                          <Badge variant={config.variant} className="text-xs">
+                            {config.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {generation.model_used}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(generation)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Exportar Geração</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <p className="text-sm text-muted-foreground">
+                                  Escolha o formato para exportar esta geração:
+                                </p>
+                                <div className="flex gap-2">
+                                  <Button variant="outline" size="sm">
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    TXT
+                                  </Button>
+                                  <Button variant="outline" size="sm">
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    JSON
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="font-medium">Prompt:</span>
+                          <p className="text-muted-foreground mt-1 line-clamp-2">
+                            {generation.prompt || "Sem prompt disponível"}
+                          </p>
+                        </div>
+                        
+                        {generation.response && (
+                          <div className="text-sm">
+                            <span className="font-medium">Resposta:</span>
+                            <p className="text-muted-foreground mt-1 line-clamp-3">
+                              {generation.response}
+                            </p>
+                          </div>
                         )}
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      </div>
+
+                      {/* Metrics */}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1">
+                            <Zap className="h-3 w-3" />
+                            <span>{generation.tokens_used || 0} tokens</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {generation.generation_time 
+                                ? `${generation.generation_time}ms` 
+                                : "N/A"
+                              }
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                              {formatDistanceToNow(new Date(generation.created_at), {
+                                addSuffix: true,
+                                locale: ptBR
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-xs">
+                          {format(new Date(generation.created_at), "dd/MM/yyyy HH:mm", {
+                            locale: ptBR
+                          })}
+                        </div>
                       </div>
                     </div>
-
-                    {/* Prompt */}
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-foreground line-clamp-2">
-                        {generation.prompt}
-                      </p>
-                    </div>
-
-                    {/* Metrics */}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(generation.created_at), { 
-                          addSuffix: true, 
-                          locale: ptBR 
-                        })}
-                      </div>
-                      
-                      {generation.tokens_used > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3" />
-                          {generation.tokens_used.toLocaleString()} tokens
-                        </div>
-                      )}
-                      
-                      {generation.generation_time && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {(generation.generation_time / 1000).toFixed(1)}s
-                        </div>
-                      )}
-                      
-                      {generation.document_id && (
-                        <div className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          Documento criado
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Error message */}
-                    {generation.error_message && (
-                      <div className="p-2 bg-destructive/10 rounded text-xs text-destructive">
-                        {generation.error_message}
-                      </div>
-                    )}
+                    {index < data.data.length - 1 && <Separator className="my-2" />}
                   </div>
-                  
-                  {index < result.data.length - 1 && (
-                    <Separator className="my-4" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
+                );
+              })}
+            </div>
+          </ScrollArea>
 
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            Página {result.currentPage} de {result.totalPages} ({result.totalCount} registros)
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages} ({data.total} registros)
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(result.currentPage - 1)}
-              disabled={!result.hasPreviousPage}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(result.currentPage + 1)}
-              disabled={!result.hasNextPage}
-            >
-              Próxima
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Modal de Detalhes */}
+      <GenerationDetailsModal
+        generation={selectedGeneration}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 };

@@ -1,16 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-interface PaginatedGenerationsParams {
+interface UsePaginatedGenerationsParams {
   page: number;
-  pageSize: number;
+  limit: number;
   searchQuery?: string;
   statusFilter?: string;
   modelFilter?: string;
   dateRange?: {
-    from: Date | null;
-    to: Date | null;
+    from: Date | undefined;
+    to: Date | undefined;
   };
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  minTokens?: number;
+  maxTokens?: number;
 }
 
 interface PaginatedGenerationsResult {
@@ -24,12 +28,16 @@ interface PaginatedGenerationsResult {
 
 const fetchPaginatedGenerations = async ({
   page,
-  pageSize,
+  limit,
   searchQuery,
   statusFilter,
   modelFilter,
   dateRange,
-}: PaginatedGenerationsParams): Promise<PaginatedGenerationsResult> => {
+  sortBy = "created_at",
+  sortOrder = "desc",
+  minTokens,
+  maxTokens,
+}: UsePaginatedGenerationsParams): Promise<PaginatedGenerationsResult> => {
   let query = supabase
     .from('ai_generations')
     .select('*', { count: 'exact' })
@@ -56,9 +64,22 @@ const fetchPaginatedGenerations = async ({
     query = query.lte('created_at', dateRange.to.toISOString());
   }
 
+  // Aplicar filtros de tokens
+  if (minTokens !== undefined) {
+    query = query.gte('tokens_used', minTokens);
+  }
+  
+  if (maxTokens !== undefined) {
+    query = query.lte('tokens_used', maxTokens);
+  }
+
+  // Aplicar ordenação
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
   // Aplicar paginação
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  
   query = query.range(from, to);
 
   const { data, error, count } = await query;
@@ -66,7 +87,7 @@ const fetchPaginatedGenerations = async ({
   if (error) throw error;
 
   const totalCount = count || 0;
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = Math.ceil(totalCount / limit);
 
   return {
     data: data || [],
@@ -78,10 +99,43 @@ const fetchPaginatedGenerations = async ({
   };
 };
 
-export const usePaginatedGenerations = (params: PaginatedGenerationsParams) => {
+export const usePaginatedGenerations = ({
+  page,
+  limit,
+  searchQuery,
+  statusFilter,
+  modelFilter,
+  dateRange,
+  sortBy = "created_at",
+  sortOrder = "desc",
+  minTokens,
+  maxTokens,
+}: UsePaginatedGenerationsParams) => {
   return useQuery({
-    queryKey: ['paginated-ai-generations', params],
-    queryFn: () => fetchPaginatedGenerations(params),
+    queryKey: ['paginated-ai-generations', {
+      page,
+      limit,
+      searchQuery,
+      statusFilter,
+      modelFilter,
+      dateRange,
+      sortBy,
+      sortOrder,
+      minTokens,
+      maxTokens,
+    }],
+    queryFn: () => fetchPaginatedGenerations({
+      page,
+      limit,
+      searchQuery,
+      statusFilter,
+      modelFilter,
+      dateRange,
+      sortBy,
+      sortOrder,
+      minTokens,
+      maxTokens,
+    }),
     keepPreviousData: true,
   });
 };
