@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { RefreshCw, FileDown, ChevronDown, Eye, Download, Trash, Filter, Calendar, Search, Bot, Zap, Clock, FileText } from "lucide-react";
 import { useState } from "react";
 import { PaginatedGenerationsList } from "@/components/generations/PaginatedGenerationsList";
+import { SeedDataButton } from "@/components/debug/SeedDataButton";
 
 const HistoricoGeracoes = () => {
   const [dateRange, setDateRange] = useState<{
@@ -89,6 +90,9 @@ const HistoricoGeracoes = () => {
             </DropdownMenu>
           </div>
         </div>
+
+        {/* Debug: Botão para popular dados de teste */}
+        <SeedDataButton />
 
         {/* Filtros */}
         <Card>
