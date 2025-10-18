@@ -90,7 +90,13 @@ const InviteRegister = () => {
       return;
     }
     toast({ title: "Cadastro concluído", description: "Bem-vindo à empresa." });
-    await signIn(emailSanitized, password);
+    const { error } = await signIn(emailSanitized, password);
+    if (error) {
+      toast({ title: "Falha no login", description: error.message, variant: "destructive" });
+      navigate("/auth/login", { replace: true });
+      return;
+    }
+    toast({ title: "Bem-vindo", description: "Login realizado com sucesso." });
     navigate("/", { replace: true });
   };
 

@@ -71,6 +71,20 @@ export const useAuth = () => {
     if (!user.is_active) return { data: null, error: { message: "Usuário inativo" } } as any;
     const ok = await verifyPassword(password, emailSanitized, (user as any).password_hash);
     if (!ok) return { data: null, error: { message: "Credenciais inválidas" } } as any;
+
+    // Validar empresa vinculada ativa antes de conceder acesso
+    const { data: memberships, error: memError } = await supabase
+      .from("company_users")
+      .select("company_id, company:companies(is_active)")
+      .eq("user_id", (user as any).id);
+    if (memError) return { data: null, error: { message: "Erro ao validar empresa vinculada" } } as any;
+    if (Array.isArray(memberships) && memberships.length > 0) {
+      const hasActiveCompany = (memberships as any[]).some((m: any) => m?.company?.is_active === true);
+      if (!hasActiveCompany) {
+        return { data: null, error: { message: "Empresa vinculada ao usuário não se encontra ativa no sistema" } } as any;
+      }
+    }
+
     writeSession({ userId: user.id, email: user.email });
     setAuthState({ user: { id: user.id, email: user.email, is_active: user.is_active }, loading: false });
     return { data: { user }, error: null } as any;

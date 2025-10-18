@@ -86,8 +86,8 @@ const RegisterCompany = () => {
         },
       });
 
-      toast({ title: "Empresa cadastrada", description: "Usuário administrador criado e vinculado." });
-      navigate("/");
+      toast({ title: "Empresa cadastrada", description: "Aguarde ativação para acessar o sistema." });
+      navigate("/auth/login");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao concluir cadastro";
       toast({ title: "Erro", description: msg, variant: "destructive" });

@@ -17,15 +17,26 @@ import RecoverPassword from "./pages/Auth/RecoverPassword";
 import InviteRegister from "./pages/Auth/InviteRegister";
 import { useAuth } from "@/hooks/use-auth";
 import { useCompanyMembership } from "@/hooks/use-company-membership";
+import { useToast } from "@/hooks/use-toast";
 
 const queryClient = new QueryClient();
 
 const RequireCompany = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { data: membership, isLoading } = useCompanyMembership();
+  const { toast } = useToast();
   if (loading || isLoading) return <div className="p-6">Carregando...</div>;
   if (!user) return <Navigate to="/auth/login" replace />;
   if (!membership) return <Navigate to="/auth/register-company" replace />;
+  if (membership?.company && membership.company.is_active === false) {
+    toast({
+      title: "Acesso bloqueado",
+      description: "Empresa vinculada ao usuário não se encontra ativa no sistema",
+      variant: "destructive",
+    });
+    signOut();
+    return <Navigate to="/auth/login" replace />;
+  }
   return <Outlet />;
 };
 

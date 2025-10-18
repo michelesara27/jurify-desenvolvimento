@@ -21,6 +21,7 @@ export interface CompanyUsersMembership {
     zip_code: string | null;
     phone: string | null;
     email: string | null;
+    is_active?: boolean | null;
   };
 }
 
@@ -51,7 +52,7 @@ export const useCompanyMembership = () => {
       const { data, error } = await supabase
         .from("company_users")
         .select(
-          `*, company:companies(id, name, cnpj, address, city, state, zip_code, phone, email)`
+          `*, company:companies(id, name, cnpj, address, city, state, zip_code, phone, email, is_active)`
         )
         .eq("user_id", user.id)
         .limit(1)
@@ -66,8 +67,7 @@ export const useCompanyMembership = () => {
 
 export const useRegisterCompany = () => {
   const { toast } = useToast();
-  const { signIn } = useAuth();
-
+ 
   return useMutation({
     mutationFn: async (payload: RegisterCompanyPayload): Promise<CompanyUsersMembership> => {
       const { company, credentials } = payload;
@@ -84,7 +84,7 @@ export const useRegisterCompany = () => {
           city: company.city,
           state: company.state,
           zip_code: company.zip_code,
-          is_active: true,
+          is_active: false,
         })
         .select()
         .single();
@@ -119,12 +119,9 @@ export const useRegisterCompany = () => {
         throw new Error(`Erro ao vincular usuário à empresa: ${membershipError.message}`);
       }
 
-      // Efetuar login e session
-      await signIn(emailSanitized, credentials.password);
-
       toast({
         title: "Cadastro concluído",
-        description: "Empresa criada e usuário definido como administrador.",
+        description: "Empresa criada e usuário definido como administrador. Aguarde ativação para acesso.",
       });
 
       return membership as CompanyUsersMembership;
