@@ -14,7 +14,7 @@ const Login = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [authLoading, user, navigate]);
 
@@ -28,7 +28,7 @@ const Login = () => {
       return;
     }
     toast({ title: "Bem-vindo", description: "Login realizado com sucesso." });
-    navigate("/", { replace: true });
+    navigate("/dashboard", { replace: true });
   };
 
   return (
